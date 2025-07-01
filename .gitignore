@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python/
+env/
+venv/
+*.env
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+.streamlit/
+streamlit_app.pyc
+
+# IDEs
+.vscode/
+.idea/
+
+# AWS
+.aws/
+*.pem
+
+# LangChain/FAISS
+faiss_index/
+*.db
+*.sqlite3
+
+workflow.txt
