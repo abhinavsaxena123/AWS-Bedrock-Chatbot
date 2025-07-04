@@ -1,0 +1,24 @@
+FROM python:3.9-slim-buster
+
+# Set the working directory in the container
+WORKDIR /app 
+
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application code into the container
+COPY . .
+
+# Create a directory for PDF data and the FAISS index if they don't exist
+# This is crucial for our app to find the 'Data' folder and save 'faiss_index'
+RUN mkdir -p Data
+RUN mkdir -p faiss_index
+
+# Expose the port that Streamlit runs on
+EXPOSE 8501
+
+# Command to run the Streamlit application
+CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
