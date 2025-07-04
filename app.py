@@ -63,7 +63,7 @@ def load_and_split_documents(directory_path: str):
     Returns:
         list: A list of Document objects, representing chunks of the PDFs.
     """
-    st.info(f"Loading documents from: {directory_path}...") # Added info message
+    st.info(f"Loading documents from: {directory_path}...") 
     loader = PyPDFDirectoryLoader(directory_path)
     documents = loader.load()
 
@@ -75,7 +75,6 @@ def load_and_split_documents(directory_path: str):
     )
 
     docs = text_splitter.split_documents(documents)
-    st.success(f"Loaded and split {len(documents)} documents into {len(docs)} chunks.") # Added success message
     return docs
 
 
@@ -88,13 +87,11 @@ def create_and_save_vector_store(documents: list, embedding_model, save_path: st
         embedding_model: The Bedrock Embeddings model to use.
         save_path (str): The directory path to save the FAISS index.
     """
-    st.info("Creating FAISS vector store...") # Added info message
     vector_store_faiss = FAISS.from_documents(
         documents,
         embedding_model
     )
     vector_store_faiss.save_local(save_path)
-    st.success(f"FAISS index saved locally at: {save_path}") # Added success message
 
 
 def load_vector_store(save_path: str, embedding_model):
@@ -108,11 +105,9 @@ def load_vector_store(save_path: str, embedding_model):
     Returns:
         FAISS: The loaded FAISS vector store.
     """
-    st.info("Loading FAISS vector store...") # Added info message
     # allow_dangerous_deserialization=True is required for loading FAISS indexes
     # from disk, as it involves deserializing pickled objects.
     vector_store = FAISS.load_local(save_path, embedding_model, allow_dangerous_deserialization=True)
-    st.success("FAISS index loaded successfully.") # Added success message
     return vector_store
 
 
@@ -141,7 +136,6 @@ def get_rag_chain(llm, vectorstore_faiss):
     Returns:
         RetrievalQA: The configured RAG chain.
     """
-    st.info("Setting up RAG chain...") # Added info message
     rag_prompt = PromptTemplate(
         template = PROMPT_TEMPLATE,
         input_variables=["context", "question"]
@@ -163,7 +157,6 @@ def get_rag_chain(llm, vectorstore_faiss):
         return_source_documents=True,
         chain_type_kwargs={"prompt": rag_prompt}
     )
-    st.success("RAG chain setup complete.") # Added success message
     return qa_chain
 
 
@@ -201,7 +194,7 @@ def main():
 
 
     st.markdown("---")
-    st.subheader("Ask a question about the uploaded research papers on Cloud Computing!") # Changed from st.markdown
+    st.subheader("Ask a question about the uploaded research papers on Cloud Computing!") 
 
     user_question = st.text_area("Your Question:")
 
