@@ -23,7 +23,7 @@ If you don't know the answer, just say that you don't know, don't try to make up
 Question: {question}
 Assistant:"""
 
-#Directory of PDF documents are stored
+# Directory of PDF documents are stored
 PDF_DATA_DIRECTORY = "Data"
 # FAISS index save path
 FAISS_INDEX_PATH = "faiss_index"
@@ -63,17 +63,19 @@ def load_and_split_documents(directory_path: str):
     Returns:
         list: A list of Document objects, representing chunks of the PDFs.
     """
+    st.info(f"Loading documents from: {directory_path}...") # Added info message
     loader = PyPDFDirectoryLoader(directory_path)
     documents = loader.load()
 
     # Define text splitter
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,        # Size of each text chunk
-        chunk_overlap=100,      # Overlap between chunks to maintain context
-        length_function=len     # Function to calculate chunk length
+        chunk_size=1000,       # Size of each text chunk
+        chunk_overlap=100,     # Overlap between chunks to maintain context
+        length_function=len    # Function to calculate chunk length
     )
 
     docs = text_splitter.split_documents(documents)
+    st.success(f"Loaded and split {len(documents)} documents into {len(docs)} chunks.") # Added success message
     return docs
 
 
@@ -86,11 +88,13 @@ def create_and_save_vector_store(documents: list, embedding_model, save_path: st
         embedding_model: The Bedrock Embeddings model to use.
         save_path (str): The directory path to save the FAISS index.
     """
+    st.info("Creating FAISS vector store...") # Added info message
     vector_store_faiss = FAISS.from_documents(
         documents,
         embedding_model
     )
     vector_store_faiss.save_local(save_path)
+    st.success(f"FAISS index saved locally at: {save_path}") # Added success message
 
 
 def load_vector_store(save_path: str, embedding_model):
@@ -104,9 +108,11 @@ def load_vector_store(save_path: str, embedding_model):
     Returns:
         FAISS: The loaded FAISS vector store.
     """
+    st.info("Loading FAISS vector store...") # Added info message
     # allow_dangerous_deserialization=True is required for loading FAISS indexes
     # from disk, as it involves deserializing pickled objects.
     vector_store = FAISS.load_local(save_path, embedding_model, allow_dangerous_deserialization=True)
+    st.success("FAISS index loaded successfully.") # Added success message
     return vector_store
 
 
@@ -135,6 +141,7 @@ def get_rag_chain(llm, vectorstore_faiss):
     Returns:
         RetrievalQA: The configured RAG chain.
     """
+    st.info("Setting up RAG chain...") # Added info message
     rag_prompt = PromptTemplate(
         template = PROMPT_TEMPLATE,
         input_variables=["context", "question"]
@@ -150,36 +157,51 @@ def get_rag_chain(llm, vectorstore_faiss):
         retriever = vectorstore_faiss.as_retriever(
             search_type="similarity", # Using similarity search
             search_kwargs={
-                "k":5   # Retrive top 5 most similar doumnets
+                "k":5    # Retrieve top 5 most similar documents
             }
         ),
         return_source_documents=True,
         chain_type_kwargs={"prompt": rag_prompt}
     )
-
+    st.success("RAG chain setup complete.") # Added success message
     return qa_chain
 
 
-#Streamlit Application
+# Streamlit Application
 def main():
     st.set_page_config(page_title="RAG: Bedrock Chatbot for Cloud Computing Research", layout="wide")
-    st.header("📚 End-to-End RAG Chatbot with Amazon Bedrock")
+    st.header("End-to-End RAG Chatbot with Amazon Bedrock")
 
-    # This part assumes the vector store is already created
-    # If it doesn't exist, it will create it once at the start
+    with st.sidebar:
+        st.subheader("Vector Store Management")
+
+        # Explicit button to create/update vector store
+        if st.button("Create/Update Vector Store"):
+            if not os.path.exists(PDF_DATA_DIRECTORY) or not os.listdir(PDF_DATA_DIRECTORY):
+                st.warning(f"'{PDF_DATA_DIRECTORY}' directory is empty or does not exist. Please place your PDFs inside.")
+            else:
+                with st.spinner("Processing documents and creating vector store..."):
+                    docs = load_and_split_documents(PDF_DATA_DIRECTORY)
+                    create_and_save_vector_store(docs, bedrock_embedding, FAISS_INDEX_PATH)
+                    st.success("Vector Store updated successfully!")
+        
+        st.markdown("---") 
+
+    # Main area for chatbot interaction
+    # Initial one-time setup if FAISS index doesn't exist
     if not os.path.exists(FAISS_INDEX_PATH):
         if not os.path.exists(PDF_DATA_DIRECTORY) or not os.listdir(PDF_DATA_DIRECTORY):
-            st.warning(f"'{PDF_DATA_DIRECTORY}' directory is empty or does not exist. Please place your PDFs inside and rerun.")
+            st.warning(f"'{PDF_DATA_DIRECTORY}' directory is empty or does not exist. Please place your PDFs inside and click 'Create/Update Vector Store' in the sidebar.")
             st.stop() 
         else:
-            with st.spinner("One-time setup: Processing documents and creating vector store..."):
+            with st.spinner("One-time setup: Processing documents and creating vector store... This may take a moment."):
                 docs = load_and_split_documents(PDF_DATA_DIRECTORY)
                 create_and_save_vector_store(docs, bedrock_embedding, FAISS_INDEX_PATH)
-            st.success("Initial Vector Store created successfully!")
+            st.success("Initial Vector Store created successfully! You can now ask questions.")
 
 
     st.markdown("---")
-    st.markdown("Ask a question about the uploaded research papers on Cloud Computing!")
+    st.subheader("Ask a question about the uploaded research papers on Cloud Computing!") # Changed from st.markdown
 
     user_question = st.text_area("Your Question:")
 
@@ -199,11 +221,11 @@ def main():
                     # Get the response
                     answer = qa_chain({"query": user_question})
 
-                    st.subheader("Answer:")
+                    st.subheader("Answer:") 
                     st.write(answer['result'])
 
-                    # display source documentss
-                    with st.expander("🔗 See Source Documents"):
+                    # display source documents
+                    with st.expander("🔗 See Source Documents"): 
                         for i, doc in enumerate(answer['source_documents']):
                             st.write(f"**Source {i+1}:** {doc.metadata.get('source', 'N/A')}")
                             st.write(doc.page_content)
